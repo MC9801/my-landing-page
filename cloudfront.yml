@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFront Distribution para el sitio web'
+
+Parameters:
+  ProjectName:
+    Type: String
+  Environment:
+    Type: String
+  S3Bucket:
+    Type: String
+  DomainName:
+    Type: String
+
+Resources:
+  # Origin Access Identity para CloudFront
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub OAI for ${ProjectName}-${Environment}
+
+  # Distribución de CloudFront
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub ${ProjectName}-${Environment} Distribution
+        Enabled: true
+        HttpVersion: http2
+        IPV6Enabled: true
+        PriceClass: PriceClass_All
+        Aliases:
+          - !Sub ${Environment}.${DomainName}
+        Origins:
+          - DomainName: !GetAtt S3Bucket.DomainName
+            Id: S3Origin
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${CloudFrontOAI}
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          MinTTL: 0
+          DefaultTTL: 3600
+          MaxTTL: 86400
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 404
+            ResponsePagePath: /404.html
+          - ErrorCode: 403
+            ResponseCode: 403
+            ResponsePagePath: /404.html
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        Logging:
+          IncludeCookies: false
+          Bucket: !GetAtt S3Bucket.DomainName
+          Prefix: cloudfront-logs/
+
+Outputs:
+  DistributionId:
+    Description: ID de la distribución de CloudFront
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-DistributionId
+
+  DistributionDomain:
+    Description: Domain de CloudFront
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-DistributionDomain
+
+  WebsiteURL:
+    Description: URL del sitio web
+    Value: !Sub https://${Environment}.${DomainName}
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-WebsiteURL

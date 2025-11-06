@@ -1,0 +1,7 @@
+{
+  "Parameters": {
+    "ProjectName": "my-landing-page",
+    "DomainName": "midominio.com",
+    "Environment": "dev"
+  }
+}

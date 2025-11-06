@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Landing page infrastructure'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    Description: Environment name
+
+Resources:
+  # Ejemplo: Bucket S3 para la landing page
+  LandingPageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "my-landing-page-${EnvironmentName}-${AWS::AccountId}"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  # Política para hacer el bucket público
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LandingPageBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action:
+              - "s3:GetObject"
+            Resource: !Sub "${LandingPageBucket.Arn}/*"
+
+Outputs:
+  WebsiteURL:
+    Description: "URL del sitio web"
+    Value: !GetAtt LandingPageBucket.WebsiteURL

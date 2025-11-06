@@ -1,0 +1,108 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Landing Page Next.js - Stack Simple'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Description: 'Nombre del proyecto'
+    Default: 'my-landing-page'
+  DomainName:
+    Type: String
+    Description: 'Dominio principal (ej: midominio.com)'
+    Default: 'example.com'
+  Environment:
+    Type: String
+    Description: 'Ambiente de despliegue'
+    AllowedValues:
+      - 'dev'
+      - 'staging'
+      - 'prod'
+    Default: 'dev'
+
+Resources:
+  # S3 Bucket para el sitio web
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-${Environment}-website'
+      AccessControl: Private
+      WebsiteConfiguration:
+        IndexDocument: 'index.html'
+        ErrorDocument: '404.html'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: 'Project'
+          Value: !Ref ProjectName
+        - Key: 'Environment'
+          Value: !Ref Environment
+
+  # CloudFront Origin Access Identity
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub 'OAI for ${ProjectName}-${Environment}'
+
+  # CloudFront Distribution
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub '${ProjectName}-${Environment} Distribution'
+        Enabled: true
+        HttpVersion: 'http2'
+        IPV6Enabled: true
+        PriceClass: 'PriceClass_All'
+        DefaultRootObject: 'index.html'
+        Origins:
+          - DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            Id: 'S3Origin'
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOAI}'
+        DefaultCacheBehavior:
+          TargetOriginId: 'S3Origin'
+          ViewerProtocolPolicy: 'redirect-to-https'
+          AllowedMethods:
+            - 'GET'
+            - 'HEAD'
+            - 'OPTIONS'
+          CachedMethods:
+            - 'GET'
+            - 'HEAD'
+            - 'OPTIONS'
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: 'none'
+          MinTTL: 0
+          DefaultTTL: 3600
+          MaxTTL: 86400
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 404
+            ResponsePagePath: '/404.html'
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+Outputs:
+  WebsiteURL:
+    Description: 'URL del sitio web'
+    Value: !GetAtt CloudFrontDistribution.DomainName
+  
+  S3BucketName:
+    Description: 'Nombre del bucket S3'
+    Value: !Ref WebsiteBucket
+  
+  CloudFrontDistributionId:
+    Description: 'ID de la distribución de CloudFront'
+    Value: !Ref CloudFrontDistribution

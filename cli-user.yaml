@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Usuario IAM para CLI y ECR'
+
+Resources:
+  CLIUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: my-landing-page-cli-user
+      Policies:
+        - PolicyName: ECRAndS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ecr:*'
+                  - 's3:*'
+                  - 'cloudformation:DescribeStacks'
+                  - 'sts:GetCallerIdentity'
+                Resource: '*'
+
+  UserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref CLIUser
+
+Outputs:
+  AccessKeyId:
+    Description: 'Access Key para AWS CLI'
+    Value: !Ref UserAccessKey
+  SecretAccessKey:
+    Description: 'Secret Access Key para AWS CLI'
+    Value: !GetAtt UserAccessKey.SecretAccessKey

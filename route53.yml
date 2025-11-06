@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Route53 y ACM para DNS y certificados SSL'
+
+Parameters:
+  ProjectName:
+    Type: String
+  Environment:
+    Type: String
+  DomainName:
+    Type: String
+  CloudFrontDistribution:
+    Type: String
+
+Resources:
+  # Hosted Zone (asumiendo que ya existe)
+  # DNSRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Properties:
+  #     HostedZoneName: !Sub ${DomainName}.
+  #     Name: !Sub ${Environment}.${DomainName}
+  #     Type: A
+  #     AliasTarget:
+  #       DNSName: !GetAtt CloudFrontDistribution.DomainName
+  #       HostedZoneId: Z2FDTNDATAQYW2
+
+  # Certificate Manager para SSL
+  SSLCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub ${Environment}.${DomainName}
+      SubjectAlternativeNames:
+        - !Sub *.${Environment}.${DomainName}
+      ValidationMethod: DNS
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  CertificateArn:
+    Description: ARN del certificado SSL
+    Value: !Ref SSLCertificate
+    Export:
+      Name: !Sub ${ProjectName}-${Environment}-CertificateArn

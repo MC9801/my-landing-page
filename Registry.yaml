@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECR repository stack for storing Clouder container images
+
+Resources:
+  Repository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: clouder-web
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: IMMUTABLE
+      EncryptionConfiguration:
+        EncryptionType: AES256
+
+Outputs:
+  RepositoryName:
+    Description: Name of the ECR repository
+    Value: !Ref Repository
+    Export:
+      Name: ClouderRepositoryName
+
+  RepositoryUri:
+    Description: URI to reference the repository when tagging images
+    Value: !GetAtt Repository.RepositoryUri
+    Export:
+      Name: ClouderRepositoryUri
+
+  RepositoryArn:
+    Description: ARN of the ECR repository
+    Value: !GetAtt Repository.Arn
+    Export:
+      Name: ClouderRepositoryArn
+      
